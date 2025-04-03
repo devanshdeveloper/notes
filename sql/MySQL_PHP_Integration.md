@@ -48,84 +48,41 @@ try {
 }
 ```
 
-### Connection Management
+### Enhanced Connection Management
 
 ```php
-// Connection Pool Implementation Example
-class ConnectionPool {
-    private static $instances = [];
-    private static $maxConnections = 10;
-    private $host;
-    private $username;
-    private $password;
-    private $database;
-
-    public function __construct($host, $username, $password, $database) {
-        $this->host = $host;
-        $this->username = $username;
-        $this->password = $password;
-        $this->database = $database;
-    }
-
-    public static function getInstance($host, $username, $password, $database) {
-        $key = md5($host . $username . $database);
-        if (!isset(self::$instances[$key]) || count(self::$instances[$key]) < self::$maxConnections) {
-            self::$instances[$key][] = new mysqli($host, $username, $password, $database);
-        }
-        return self::$instances[$key][array_rand(self::$instances[$key])];
-    }
-
-    public static function closeAll() {
-        foreach (self::$instances as $connections) {
-            foreach ($connections as $connection) {
-                $connection->close();
-            }
-        }
-        self::$instances = [];
-    }
-}
-
-// Enhanced Error Handling Example
+// Enhanced Database Connection Class
 class DatabaseConnection {
     private $connection;
-    private $logger;
 
     public function __construct($host, $username, $password, $database) {
         try {
             $this->connection = new mysqli($host, $username, $password, $database);
             if ($this->connection->connect_errno) {
-                $this->logError('Connection failed: ' . $this->connection->connect_error);
-                throw new Exception($this->connection->connect_error);
+                throw new Exception("Connection failed: " . $this->connection->connect_error);
             }
             $this->connection->set_charset('utf8mb4');
         } catch (Exception $e) {
-            $this->logError('Connection error: ' . $e->getMessage());
-            throw $e;
+            die("Connection failed: " . $e->getMessage());
         }
     }
 
-    private function logError($message) {
-        error_log(date('Y-m-d H:i:s') . ' - ' . $message . "\n", 3, 'database_errors.log');
+    public function query($sql) {
+        $result = $this->connection->query($sql);
+        if (!$result) {
+            throw new Exception("Query failed: " . $this->connection->error);
+        }
+        return $result;
     }
 
-    public function query($sql) {
-        try {
-            $result = $this->connection->query($sql);
-            if (!$result) {
-                $this->logError('Query failed: ' . $this->connection->error . ' SQL: ' . $sql);
-                throw new Exception($this->connection->error);
-            }
-            return $result;
-        } catch (Exception $e) {
-            $this->logError('Query error: ' . $e->getMessage());
-            throw $e;
+    public function close() {
+        if ($this->connection) {
+            $this->connection->close();
         }
     }
 
     public function __destruct() {
-        if ($this->connection) {
-            $this->connection->close();
-        }
+        $this->close();
     }
 }
 ```
