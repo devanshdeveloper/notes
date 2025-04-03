@@ -96,7 +96,7 @@ CREATE TABLE students (
 ```
 
 ```mermaid
-ERDiagram
+erDiagram
     STUDENTS ||--o{ CLASSES : enrolled_in
     STUDENTS {
         int student_id
